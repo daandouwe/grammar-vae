@@ -1,3 +1,5 @@
+import h5py
+
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -12,37 +14,38 @@ class Encoder(nn.Module):
         self.conv2 = nn.Conv1d(2, 3, kernel_size=3)
         self.conv3 = nn.Conv1d(3, 4, kernel_size=4)
 
-        # self.linear = nn.Linear(conv_dim, hidden_dim)
-        # self.mu = nn.Linear(hidden_dim)
-        # self.sigma = nn.Linear(hidden_dim)
+        self.linear = nn.Linear(24, hidden_dim)
+        self.mu = nn.Linear(hidden_dim, z_dim)
+        self.sigma = nn.Linear(hidden_dim, z_dim)
 
         self.relu = nn.ReLU()
+        self.softplus = nn.Softplus()
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.relu(x)
-        x = self.conv3(x)
-        x = self.relu(x)
-        out = x.view(x.size(0), -1) # flatten
-        return out
+        h = self.conv1(x)
+        h = self.relu(h)
+        h = self.conv2(h)
+        h = self.relu(h)
+        h = self.conv3(h)
+        h = self.relu(h)
+        h = h.view(x.size(0), -1) # flatten
 
-        # filters, kernel_size,
-        # 'conv1': 2, 'conv2': 3, 'conv3': 4
-        # h = Convolution1D(self.hypers['conv1'], self.hypers['conv1'], activation = 'relu', name='conv_1')(x)
-        # h = BatchNormalization(name='batch_1')(h)
-        # h = Convolution1D(self.hypers['conv2'], self.hypers['conv2'], activation = 'relu', name='conv_2')(h)
-        # h = BatchNormalization(name='batch_2')(h)
-        # h = Convolution1D(self.hypers['conv3'], self.hypers['conv3'], activation = 'relu', name='conv_3')(h)
-        # h = BatchNormalization(name='batch_3')(h)
-        # h = Flatten(name='flatten_1')(h)
-        # h = Dense(self.hypers['dense'], activation = 'relu', name='dense_1')(h)
-        #
+        h = self.linear(h)
+        mu = self.mu(h)
+        sigma = self.softplus(self.sigma(h))
+        return mu, sigma
 
 if __name__ == '__main__':
+    # Load data
+    data_path = '../data/eq2_grammar_dataset.h5'
+    f = h5py.File(data_path, 'r')
+    data = f['data']
+
+    # Create encoder
     encoder = Encoder(10, 10)
-    x = Variable(torch.ones((1, 15, 12)))
+
+    x = Variable(torch.from_numpy(data[0:100]).float())
+    mu, sigma = encoder(x)
+
     print(x)
-    y = encoder(x)
-    print(y)
+    print(mu)
