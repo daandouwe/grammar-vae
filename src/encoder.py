@@ -1,20 +1,20 @@
-import h5py
-
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.distributions import Normal
 
 class Encoder(nn.Module):
     """Convolutional encoder for Grammar VAE. Applies a series of
     one-dimensional convolutions to a batch of one-hot encodings of
     a sequence"""
-    def __init__(self, hidden_dim, z_dim):
+    def __init__(self, hidden_dim=20, z_dim=2):
         super(Encoder, self).__init__()
-        self.conv1 = nn.Conv1d(15, 2, kernel_size=2)
+        # 12 rules, so 12 input channels
+        self.conv1 = nn.Conv1d(12, 2, kernel_size=2)
         self.conv2 = nn.Conv1d(2, 3, kernel_size=3)
         self.conv3 = nn.Conv1d(3, 4, kernel_size=4)
 
-        self.linear = nn.Linear(24, hidden_dim)
+        self.linear = nn.Linear(36, hidden_dim)
         self.mu = nn.Linear(hidden_dim, z_dim)
         self.sigma = nn.Linear(hidden_dim, z_dim)
 
@@ -22,6 +22,7 @@ class Encoder(nn.Module):
         self.softplus = nn.Softplus()
 
     def forward(self, x):
+        """Encode x into a mean and variance of a Normal"""
         h = self.conv1(x)
         h = self.relu(h)
         h = self.conv2(h)
@@ -29,11 +30,22 @@ class Encoder(nn.Module):
         h = self.conv3(h)
         h = self.relu(h)
         h = h.view(x.size(0), -1) # flatten
-
         h = self.linear(h)
+        h = self.relu(h)
         mu = self.mu(h)
         sigma = self.softplus(self.sigma(h))
         return mu, sigma
+
+    def sample(self, mu, sigma):
+        """Reparametrized sample from a N(mu, sigma) distribution"""
+        normal = Normal(torch.zeros(mu.shape), torch.ones(sigma.shape))
+        eps = Variable(normal.sample())
+        z = mu + eps*torch.sqrt(sigma)
+        return z
+
+    def kl(self, mu, sigma):
+        """KL divergence between two normal distributions"""
+        return torch.mean(-0.5 * torch.sum(1 + sigma - mu.pow(2) - sigma.exp(), 1))
 
 if __name__ == '__main__':
     # Load data
@@ -42,10 +54,16 @@ if __name__ == '__main__':
     data = f['data']
 
     # Create encoder
-    encoder = Encoder(10, 10)
+    encoder = Encoder(20, 2)
 
-    x = Variable(torch.from_numpy(data[0:100]).float())
+    # Pass through some data
+    x = torch.from_numpy(data[:100]).transpose(-2, -1).float() # shape [batch, 12, 15]
+    x = Variable(x)
     mu, sigma = encoder(x)
+    z = encoder.sample(mu, sigma)
+    kl = encoder.kl(mu, sigma)
 
     print(x)
     print(mu)
+    print(z)
+    print(kl)
