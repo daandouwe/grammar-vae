@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from encoder import Encoder
 
 class Decoder(nn.Module):
+    
     def __init__(self, input_size, hidden_size, output_size):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size

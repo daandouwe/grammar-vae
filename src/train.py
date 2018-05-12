@@ -8,7 +8,6 @@ from torch.autograd import Variable
 from model import GrammarVAE
 from util import Timer
 
-# First run the encoder
 ENCODER_HIDDEN = 5
 Z_SIZE = 2
 DECODER_HIDDEN = 5
@@ -24,11 +23,13 @@ data_path = '../data/eq2_grammar_dataset.h5'
 f = h5py.File(data_path, 'r')
 data = f['data']
 
+# Create model
 model = GrammarVAE(ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
 def batch_iter(data, batch_size):
+    """A simple iterator over batches of data"""
     n = data.shape[0]
     i_prev = 0
     for i in range(0, n, batch_size):
@@ -41,8 +42,8 @@ def train():
     batches = batch_iter(data, BATCH_SIZE)
     for step, (x, y) in enumerate(batches):
         mu, sigma = model.encoder(x)
-        z = model.encoder.sample(mu, sigma)
-        kl = model.encoder.kl(mu, sigma)
+        z = model.sample(mu, sigma)
+        kl = model.kl(mu, sigma)
 
         logits = model.decoder(z, max_length=MAX_LENGTH)
 
