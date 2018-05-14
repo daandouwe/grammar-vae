@@ -3,8 +3,12 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.distributions import Normal
 
+from nltk import Nonterminal
+
 from encoder import Encoder
 from decoder import Decoder
+from stack import Stack,
+from grammar import GCFG, S, T, get_mask
 
 class GrammarVAE(nn.Module):
 
@@ -29,3 +33,35 @@ class GrammarVAE(nn.Module):
         z = self.sample(mu, sigma)
         logits = self.decoder(z, max_length=max_length)
         return logits
+
+    def generate(self, z, sample=False, max_length=15):
+        """Generate a valid expression from z using the decoder"""
+        stack = Stack(grammar=GCFG, start_symbol=S)
+        logits = self.decoder(z, max_length=max_length).squeeze()
+        rules = []
+        t = 0
+        while not stack.empty:
+            alpha = stack.pop()
+            mask = get_mask(alpha, stack.grammar, as_variable=True)
+            probs = mask * logits[t].exp()
+            probs = probs / probs.sum()
+            if sample:
+                raise NotImplementedError
+            else: # argmax
+                _, i = probs.max(-1)
+            # convert PyTorch Variable to regular integer
+            i = i.data.numpy()[0]
+            rule = stack.grammar.productions()[i]
+            for symbol in reversed(rule.rhs()):
+                if isinstance(symbol, Nonterminal):
+                    stack.push(symbol)
+            rules.append(rule)
+
+            t += 1
+            if t == max_length:
+                break
+        # if len(rules) < 15:
+        #     pad = [stack.grammar.productions()[-1]]
+        #     rules += (15 - len(rules))*pad
+
+        return rules

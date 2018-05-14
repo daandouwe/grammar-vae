@@ -1,28 +1,50 @@
+import numpy as np
 import torch
 from torch.autograd import Variable
 
-from grammar import gram
-from util import load_data
+from model import GrammarVAE
+from stack import Stack
 
-# Location of saved model
-model_path = '../checkpoints/model.pt'
+from util import load_data, make_nltk_tree
+from train import ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE
+
+torch.manual_seed(10)
+
+# Load saved model
+# model_path = '../checkpoints/model.pt'
+# model = torch.load(model_path)
+model = GrammarVAE(ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE)
 
 # Load data
 data_path = '../data/eq2_grammar_dataset.h5'
 data = load_data(data_path)
-gram = gram.split('\n')
 
+def data2input(x):
+    x = torch.from_numpy(x).float().unsqueeze(0).transpose(-2, -1)
+    return Variable(x)
+
+def predict(x):
+    x = data2input(x)
+    logits = model(x)
+    _, y = logits.squeeze(0).max(-1)
+    return y
+
+def evaluate(y, y_):
+    try:
+        (y == y_).mean()
+    except:
+        y_ = y_.data.numpy()
+    return (y == y_).mean()
+
+# def test():
 x = data[0]
-y = x.argmax(-1)
-pred = [gram[i] for i in y]
+# y = x.argmax(-1)
+# y_ = predict(x)
+# a = evaluate(y, y_)
 
-model = torch.load(model_path)
+mu, sigma = model.encoder(data2input(x))
+rules = model.generate(mu, max_length=5)
+print(rules)
 
-x = Variable(torch.from_numpy(x).float().unsqueeze(0).transpose(-2, -1))
-logits = model(x)
-_, y_ = logits.unsqueeze(0).max(-1)
-
-print('\n'.join(pred))
-print(logits)
-print(y_)
-print(y)
+tree = make_nltk_tree(rules, 0)
+tree.draw()

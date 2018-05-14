@@ -1,9 +1,8 @@
-import nltk
-import numpy as np
-import six
-import pdb
+import torch
+from torch.autograd import Variable
+from nltk import CFG, Nonterminal
 
-gram = """S -> S '+' T
+grammar = """S -> S '+' T
 S -> S '*' T
 S -> S '/' T
 S -> T
@@ -16,39 +15,20 @@ T -> '2'
 T -> '3'
 Nothing -> None"""
 
+GCFG = CFG.fromstring(gram)
 
-GCFG = nltk.CFG.fromstring(gram)
-start_index = GCFG.productions()[0].lhs()
+S, T = Nonterminal('S'), Nonterminal('T')
 
+def get_mask(nonterminal, grammar, as_variable=False):
+    if isinstance(nonterminal, Nonterminal):
+        mask = [rule.lhs() == nonterminal for rule in grammar.productions()]
+        mask = Variable(torch.FloatTensor(mask)) if as_variable else mask
+        return mask
+    else:
+        raise ValueError('Input must be instance of nltk.Nonterminal')
 
-all_lhs = [a.lhs().symbol() for a in GCFG.productions()]
-lhs_list = []
-for a in all_lhs:
-    if a not in lhs_list:
-        lhs_list.append(a)
+if __name__ == '__main__':
+    # Usage:
+    GCFG = nltk.CFG.fromstring(grammar)
 
-D = len(GCFG.productions())
-
-rhs_map = [None]*D
-count = 0
-for a in GCFG.productions():
-    rhs_map[count] = []
-    for b in a.rhs():
-        if not isinstance(b,six.string_types):
-            s = b.symbol()
-            rhs_map[count].extend(list(np.where(np.array(lhs_list) == s)[0]))
-    count = count + 1
-
-masks = np.zeros((len(lhs_list),D))
-count = 0
-#all_lhs.append(0)
-for sym in lhs_list:
-    is_in = np.array([a == sym for a in all_lhs], dtype=int).reshape(1,-1)
-    #pdb.set_trace()
-    masks[count] = is_in
-    count = count + 1
-
-index_array = []
-for i in range(masks.shape[1]):
-    index_array.append(np.where(masks[:,i]==1)[0][0])
-ind_of_ind = np.array(index_array)
+    print(get_mask(T))
