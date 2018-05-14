@@ -17,6 +17,8 @@ CLIP = 5.
 PRINT_EVERY = 10
 
 if __name__ == '__main__':
+    torch.manual_seed(42)
+    
     # Load data
     data_path = '../data/eq2_grammar_dataset.h5'
     data = load_data(data_path)

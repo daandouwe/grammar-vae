@@ -15,7 +15,7 @@ T -> '2'
 T -> '3'
 Nothing -> None"""
 
-GCFG = CFG.fromstring(gram)
+GCFG = CFG.fromstring(grammar)
 
 S, T = Nonterminal('S'), Nonterminal('T')
 

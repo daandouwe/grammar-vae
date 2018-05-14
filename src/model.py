@@ -7,7 +7,7 @@ from nltk import Nonterminal
 
 from encoder import Encoder
 from decoder import Decoder
-from stack import Stack,
+from stack import Stack
 from grammar import GCFG, S, T, get_mask
 
 class GrammarVAE(nn.Module):
