@@ -1,16 +1,14 @@
-import h5py
-
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
 from model import GrammarVAE
-from util import Timer
+from util import Timer, AnnealKL, load_data
 
-ENCODER_HIDDEN = 5
+ENCODER_HIDDEN = 10
 Z_SIZE = 2
-DECODER_HIDDEN = 5
+DECODER_HIDDEN = 10
 BATCH_SIZE = 100
 MAX_LENGTH = 15
 OUTPUT_SIZE = 12
@@ -20,8 +18,9 @@ PRINT_EVERY = 10
 
 # Load data
 data_path = '../data/eq2_grammar_dataset.h5'
-f = h5py.File(data_path, 'r')
-data = f['data']
+data = load_data(data_path)
+# Turn it into a float32 PyTorch Tensor
+data = torch.from_numpy(data).float()
 
 # Create model
 model = GrammarVAE(ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE)
@@ -33,25 +32,25 @@ def batch_iter(data, batch_size):
     n = data.shape[0]
     i_prev = 0
     for i in range(0, n, batch_size):
-        x = torch.from_numpy(data[i:i+batch_size]).transpose(-2, -1).float() # shape [batch, 12, 15]
+        x = data[i:i+batch_size].transpose(-2, -1) # shape [batch, 12, 15]
         x = Variable(x)
         _, y = x.max(1) # The rule index
         yield x, y
 
 def train():
     batches = batch_iter(data, BATCH_SIZE)
-    for step, (x, y) in enumerate(batches):
+    for step, (x, y) in enumerate(batches, 1):
         mu, sigma = model.encoder(x)
         z = model.sample(mu, sigma)
-        kl = model.kl(mu, sigma)
-
         logits = model.decoder(z, max_length=MAX_LENGTH)
 
         logits = logits.view(-1, logits.size(-1))
         y = y.view(-1)
         loss = criterion(logits, y)
+        kl = model.kl(mu, sigma)
 
-        elbo = loss + kl
+        alpha = anneal.alpha(step)
+        elbo = loss + alpha*kl
 
         # Update parameters
         optimizer.zero_grad()
@@ -75,7 +74,13 @@ def train():
                 )
             )
 
+def save():
+    torch.save(model, '../checkpoints/model.pt')
+
 timer = Timer()
 log = {'loss': [], 'kl': [], 'elbo': []}
+anneal = AnnealKL(step=1e-3, rate=100)
 
 train()
+
+save()

@@ -7,7 +7,7 @@ from encoder import Encoder
 from decoder import Decoder
 
 class GrammarVAE(nn.Module):
-    
+
     def __init__(self, hidden_encoder_size, z_dim, hidden_decoder_size, output_size):
         super(GrammarVAE, self).__init__()
         self.encoder = Encoder(hidden_encoder_size, z_dim)
@@ -23,3 +23,9 @@ class GrammarVAE(nn.Module):
     def kl(self, mu, sigma):
         """KL divergence between two normal distributions"""
         return torch.mean(-0.5 * torch.sum(1 + sigma - mu.pow(2) - sigma.exp(), 1))
+
+    def forward(self, x, max_length=15):
+        mu, sigma = self.encoder(x)
+        z = self.sample(mu, sigma)
+        logits = self.decoder(z, max_length=max_length)
+        return logits

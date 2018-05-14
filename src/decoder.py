@@ -5,23 +5,40 @@ from torch.autograd import Variable
 from encoder import Encoder
 
 class Decoder(nn.Module):
-    
+    """
+    RNN decoder that reconstructs the sequence of rules from laten z
+    """
     def __init__(self, input_size, hidden_size, output_size):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
 
-        self.rnn = nn.LSTM(input_size, hidden_size, batch_first=True)
-        self.linear = nn.Linear(hidden_size, output_size)
+        self.linear_in = nn.Linear(input_size, hidden_size)
+        self.rnn = nn.LSTM(hidden_size, hidden_size, batch_first=True)
+        self.linear_out = nn.Linear(hidden_size, output_size)
 
         self.relu = nn.ReLU()
 
-    def forward(self, input, max_length):
-        hx = Variable(torch.zeros(input.size(0), self.hidden_size))
-        # input is the input along all the steps!
-        input = input.unsqueeze(1).expand(-1, max_length, -1)
-        output, _ = self.rnn(input, (hx, hx))
-        output = self.linear(self.relu(output))
-        return output
+    def forward(self, z, max_length):
+        """
+        The forward pass used for training the Grammar VAE.
+        For the rnn we follow the same convention as the official keras
+        implementaion: the latent z is the input to the rnn at each timestep.
+        See: https://github.com/mkusner/grammarVAE/blob/master/models/model_eq.py
+        (line 138) for reference.
+        """
+        x = self.linear_in(z)
+        x = self.relu(x)
+
+        # The input to the rnn is the same for each timestep: it is z.
+        x = x.unsqueeze(1).expand(-1, max_length, -1)
+        hx = Variable(torch.zeros(x.size(0), self.hidden_size))
+
+        x, _ = self.rnn(x, (hx, hx))
+
+        x = self.relu(x)
+        x = self.linear_out(x)
+        return x
+
 
 
 if __name__ == '__main__':

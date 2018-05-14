@@ -3,10 +3,11 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 class Encoder(nn.Module):
-    """Convolutional encoder for Grammar VAE. Applies a series of
+    """
+    Convolutional encoder for Grammar VAE. Applies a series of
     one-dimensional convolutions to a batch of one-hot encodings of
-    a sequence"""
-
+    a sequence
+    """
     def __init__(self, hidden_dim=20, z_dim=2):
         super(Encoder, self).__init__()
         # 12 rules, so 12 input channels
@@ -30,7 +31,8 @@ class Encoder(nn.Module):
         h = self.conv3(h)
         h = self.relu(h)
         h = h.view(x.size(0), -1) # flatten
-        h = self.relu(self.linear(h))
+        h = self.linear(h)
+        h = self.relu(h)
         mu = self.mu(h)
         sigma = self.softplus(self.sigma(h))
         return mu, sigma
