@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -11,9 +13,9 @@ from train import ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE
 torch.manual_seed(10)
 
 # Load saved model
-# model_path = '../checkpoints/model.pt'
-# model = torch.load(model_path)
-model = GrammarVAE(ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE)
+model_path = 'checkpoints/model.pt'
+model = torch.load(model_path)
+# model = GrammarVAE(ENCODER_HIDDEN, Z_SIZE, DECODER_HIDDEN, OUTPUT_SIZE)
 
 # Load data
 data_path = '../data/eq2_grammar_dataset.h5'
@@ -36,15 +38,13 @@ def evaluate(y, y_):
         y_ = y_.data.numpy()
     return (y == y_).mean()
 
-# def test():
 x = data[0]
-# y = x.argmax(-1)
-# y_ = predict(x)
-# a = evaluate(y, y_)
-
-mu, sigma = model.encoder(data2input(x))
-rules = model.generate(mu, max_length=5)
+x = data2input(x)
+mu, sigma = model.encoder(x)
+rules = model.generate(mu, sample=False, max_length=15)
 print(rules)
 
-tree = make_nltk_tree(rules, 0)
-tree.draw()
+if len(rules) < 15:
+    tree = make_nltk_tree(rules)
+    print(tree)
+    # tree.draw()

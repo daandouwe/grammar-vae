@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torch.distributions import Normal
+from torch.distributions import Normal, Categorical
 
 from nltk import Nonterminal
 
@@ -12,10 +12,10 @@ from grammar import GCFG, S, T, get_mask
 
 class GrammarVAE(nn.Module):
 
-    def __init__(self, hidden_encoder_size, z_dim, hidden_decoder_size, output_size):
+    def __init__(self, hidden_encoder_size, z_dim, hidden_decoder_size, output_size, rnn_type):
         super(GrammarVAE, self).__init__()
         self.encoder = Encoder(hidden_encoder_size, z_dim)
-        self.decoder = Decoder(z_dim, hidden_decoder_size, output_size)
+        self.decoder = Decoder(z_dim, hidden_decoder_size, output_size, rnn_type)
 
     def sample(self, mu, sigma):
         """Reparametrized sample from a N(mu, sigma) distribution"""
@@ -45,23 +45,25 @@ class GrammarVAE(nn.Module):
             mask = get_mask(alpha, stack.grammar, as_variable=True)
             probs = mask * logits[t].exp()
             probs = probs / probs.sum()
+            print(probs)
             if sample:
-                raise NotImplementedError
-            else: # argmax
-                _, i = probs.max(-1)
+                m = Categorical(probs)
+                i = m.sample()
+            else:
+                _, i = probs.max(-1) # argmax
             # convert PyTorch Variable to regular integer
             i = i.data.numpy()[0]
+            # select rule i
             rule = stack.grammar.productions()[i]
+            rules.append(rule)
+            # add rhs nonterminals to stack in reversed order
             for symbol in reversed(rule.rhs()):
                 if isinstance(symbol, Nonterminal):
                     stack.push(symbol)
-            rules.append(rule)
-
             t += 1
             if t == max_length:
                 break
         # if len(rules) < 15:
         #     pad = [stack.grammar.productions()[-1]]
-        #     rules += (15 - len(rules))*pad
 
         return rules

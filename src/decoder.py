@@ -6,13 +6,20 @@ from encoder import Encoder
 
 class Decoder(nn.Module):
     """RNN decoder that reconstructs the sequence of rules from laten z"""
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, rnn_type='lstm'):
         super(Decoder, self).__init__()
         self.hidden_size = hidden_size
+        self.rnn_type = rnn_type
 
         self.linear_in = nn.Linear(input_size, hidden_size)
-        self.rnn = nn.LSTM(hidden_size, hidden_size, batch_first=True)
         self.linear_out = nn.Linear(hidden_size, output_size)
+
+        if rnn_type == 'lstm':
+            self.rnn = nn.LSTM(hidden_size, hidden_size, batch_first=True)
+        elif rnn_type == 'gru':
+            self.rnn = nn.GRU(hidden_size, hidden_size, batch_first=True)
+        else:
+            raise ValueError('Select rnn_type from [lstm, gru]')
 
         self.relu = nn.ReLU()
 
@@ -30,8 +37,9 @@ class Decoder(nn.Module):
         # The input to the rnn is the same for each timestep: it is z.
         x = x.unsqueeze(1).expand(-1, max_length, -1)
         hx = Variable(torch.zeros(x.size(0), self.hidden_size))
+        hx = (hx, hx) if self.rnn_type == 'lstm' else hx
 
-        x, _ = self.rnn(x, (hx, hx))
+        x, _ = self.rnn(x, hx)
 
         x = self.relu(x)
         x = self.linear_out(x)
