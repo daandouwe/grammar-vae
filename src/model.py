@@ -40,7 +40,7 @@ class GrammarVAE(nn.Module):
         logits = self.decoder(z, max_length=max_length).squeeze()
         rules = []
         t = 0
-        while not stack.empty:
+        while stack.nonempty:
             alpha = stack.pop()
             mask = get_mask(alpha, stack.grammar, as_variable=True)
             probs = mask * logits[t].exp()

@@ -57,7 +57,6 @@ def train():
         kl = model.kl(mu, sigma)
 
         alpha = anneal.alpha(step)
-        print(alpha)
         elbo = loss + alpha*kl
 
         # Update parameters
@@ -106,7 +105,7 @@ if __name__ == '__main__':
     anneal = AnnealKL(step=1e-3, rate=500)
 
     try:
-        for epoch in range(EPOCHS):
+        for epoch in range(1, EPOCHS+1):
             print('-' * 69)
             print('Epoch {}/{}'.format(epoch, EPOCHS))
             print('-' * 69)

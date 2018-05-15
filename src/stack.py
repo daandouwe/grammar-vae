@@ -3,7 +3,8 @@ class Stack:
 
     Args:
         grammar: an instance of nltk.CFG
-        start_symbol: an instance of nltk.Nonterminal
+        start_symbol: an instance of nltk.Nonterminal that is the
+            start symbol the grammar
     """
     def __init__(self, grammar, start_symbol):
         self.grammar = grammar
@@ -19,8 +20,8 @@ class Stack:
         return str(self._stack)
 
     @property
-    def empty(self):
-        return not self._stack
+    def nonempty(self):
+        return bool(self._stack)
 
 
 if __name__ == '__main__':
