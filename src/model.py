@@ -11,7 +11,7 @@ from stack import Stack
 from grammar import GCFG, S, T, get_mask
 
 class GrammarVAE(nn.Module):
-
+    """Grammar Variational Autoencoder"""
     def __init__(self, hidden_encoder_size, z_dim, hidden_decoder_size, output_size, rnn_type):
         super(GrammarVAE, self).__init__()
         self.encoder = Encoder(hidden_encoder_size, z_dim)
