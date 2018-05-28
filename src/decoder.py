@@ -28,8 +28,9 @@ class Decoder(nn.Module):
 
         For the rnn we follow the same convention as the official keras
         implementaion: the latent z is the input to the rnn at each timestep.
-        See: https://github.com/mkusner/grammarVAE/blob/master/models/model_eq.py
-        (line 138) for reference.
+        See line 138 of
+            https://github.com/mkusner/grammarVAE/blob/master/models/model_eq.py
+        for reference.
         """
         x = self.linear_in(z)
         x = self.relu(x)
